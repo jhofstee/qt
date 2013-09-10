@@ -272,6 +272,7 @@ private Q_SLOTS:
     void createdItem(int index, QDeclarativeItem *item);
     void destroyingItem(QDeclarativeItem *item);
     void animStopped();
+    void visibleChanged();
 };
 
 class QDeclarativeListViewAttached : public QObject
