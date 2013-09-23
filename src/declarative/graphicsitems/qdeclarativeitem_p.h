@@ -128,7 +128,7 @@ public:
       componentComplete(true), keepMouse(false),
       smooth(false), transformOriginDirty(true), doneEventPreHandler(false),
       inheritedLayoutMirror(false), effectiveLayoutMirror(false), isMirrorImplicit(true),
-      inheritMirrorFromParent(false), inheritMirrorFromItem(false), hadFocus(false), hadActiveFocus(false), keyHandler(0),
+      inheritMirrorFromParent(false), inheritMirrorFromItem(false), mShow(true), hadFocus(false), hadActiveFocus(false), keyHandler(0),
       mWidth(0), mHeight(0), mImplicitWidth(0), mImplicitHeight(0), attachedLayoutDirection(0)
     {
         QGraphicsItemPrivate::acceptedMouseButtons = 0;
@@ -182,6 +182,11 @@ public:
 
     QString state() const;
     void setState(const QString &);
+
+    bool isShown() const;
+    void setShow(bool);
+
+    void setVisible(bool);
 
     QDeclarativeAnchorLine left() const;
     QDeclarativeAnchorLine right() const;
@@ -291,6 +296,7 @@ public:
     bool inheritMirrorFromItem:1;
     bool hadFocus:1;
     bool hadActiveFocus:1;
+    bool mShow:1;
 
     QDeclarativeItemKeyFilter *keyHandler;
 
