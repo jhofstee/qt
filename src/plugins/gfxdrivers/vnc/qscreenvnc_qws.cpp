@@ -636,6 +636,7 @@ void QVNCServer::newConnection()
         delete client;
 
     client = serverSocket->nextPendingConnection();
+    qDebug() << "QVNCServer new incoming connection from" << client->peerAddress().toString();
     connect(client,SIGNAL(readyRead()),this,SLOT(readClient()));
     connect(client,SIGNAL(disconnected()),this,SLOT(discardClient()));
     handleMsg = false;
@@ -656,6 +657,17 @@ void QVNCServer::newConnection()
         QWSServer::instance()->enablePainting(true);
 }
 
+bool QVNCServer::readPasswordFile(QString &password)
+{
+    QFile file(passwordFile);
+    if (passwordFile.isEmpty() || !file.open(QIODevice::ReadOnly))
+        return false;
+
+    password = file.readAll().trimmed().right(8);
+
+    return true;
+}
+
 void QVNCServer::readClient()
 {
     switch (state) {
@@ -664,11 +676,94 @@ void QVNCServer::readClient()
                 char proto[13];
                 client->read(proto, 12);
                 proto[12] = '\0';
-                qDebug("Client protocol version %s", proto);
-                // No authentication
-                quint32 auth = htonl(1);
+                qDebug("QVNCServer Client protocol version %s", proto);
+
+                QString password;
+                bool passwordReadOK = readPasswordFile(password);
+
+                if (passwordFile.isEmpty() || (passwordReadOK && password.isEmpty())) {
+                    // Password file not set, or set but is an empty file: come on in!
+                    qDebug("QVNCServer No password configured, accepting connection");
+                    quint32 auth = htonl(1);
+                    client->write((char *) &auth, sizeof(auth));
+                    state = Init;
+                } else if (!passwordFile.isEmpty() && !passwordReadOK) {
+                    // Password file set, but can't be read: disconnect.
+                    qCritical() << "QVNCServer configured to use a password, but the file containing "
+                                   "the password can't be read. Disconnecting!!";
+                    disconnectClient();
+                    break;
+                } else {
+                    // vnc password authentication
+                    quint32 auth = htonl(2);
+                    client->write((char *) &auth, sizeof(auth));
+
+                    // Create and random challenge string as the challenge
+                    //      Note: This is linux only! For windows one ought to use this one:
+                    //      https://en.wikipedia.org/wiki/CryptGenRandom
+                    //      TODO: maybe add some feature to make compiling fail under windows?
+                    QFile file("/dev/urandom");
+                    if (!file.open(QIODevice::ReadOnly)) {
+                        qCritical() << "QVNCServer configured to use a password, but /dev/urandom "
+                                       "is not available. Disconnecting!!";
+                        disconnectClient();
+                        break;
+                    }
+
+                    qint64 bytesRead = file.read((char *) challenge, CHALLENGESIZE);
+                    if (bytesRead != CHALLENGESIZE) {
+                        qCritical() << "QVNCServer could not read the right number of random bytes from "
+                                       "/dev/urandom Disconnecting!!";
+                        disconnectClient();
+                        break;
+                    }
+
+                    file.close();
+
+                    // Send it
+                    client->write((char *) challenge, CHALLENGESIZE);
+                    state = SecurityResult;
+                }
+            }
+            break;
+
+        case SecurityResult:
+            if (client->bytesAvailable() >= CHALLENGESIZE)
+            {
+                unsigned char response[CHALLENGESIZE];
+                client->read((char *) response, CHALLENGESIZE);
+
+                // Read the password and encrypt. DES expects an 8 byte password, padded with 0's
+                QString password;
+                bool readOK = readPasswordFile(password);
+                if (!readOK) {
+                    // Password file set, but can't be read. Strange, since on connect it could be read.
+                    qCritical() << "QVNCServer configured to use a password, but the file containing "
+                                   "the password can't be read during SecurityResult. Disconnecting!!";
+                    disconnectClient();
+                    break;
+                }
+
+                QString key = password.leftJustified(8, 0);
+                deskey((unsigned char *) key.toLatin1().data(), EN0);
+                for (int i = 0; i < CHALLENGESIZE; i += 8)
+                    des(challenge+i, challenge+i);
+
+                // Check if the password matched by comparing our encrypted challenge
+                // with the response as sent by the client.
+                bool ok = (memcmp(challenge, response, CHALLENGESIZE) == 0);
+
+                qDebug("QVNCServer Authentication %s", ok ? "passed!" : "failed!");
+
+                quint32 auth = htonl(ok ? 0 : 1);
                 client->write((char *) &auth, sizeof(auth));
-                state = Init;
+                if (ok) {
+                    state = Init;
+                } else {
+                    client->waitForBytesWritten(2000);
+                    disconnectClient();
+                    memset(challenge, 0, CHALLENGESIZE);
+                }
             }
             break;
 
@@ -2030,6 +2125,7 @@ void QVNCServer::checkUpdate()
 
 void QVNCServer::discardClient()
 {
+    qDebug() << "QVNCServer disconnected from" << client->peerAddress().toString();
     timer->stop();
     state = Unconnected;
     delete encoder;
@@ -2196,6 +2292,10 @@ bool QVNCScreen::connect(const QString &displaySpec)
         if (args.indexOf(depthRegexp) != -1)
             d = depthRegexp.cap(1).toInt();
 
+        QRegExp passwordRegexp(QLatin1String("^passwordFile=([^\\0]+)$"));
+        if (args.indexOf(passwordRegexp) != -1)
+            d_ptr->passwordFile = passwordRegexp.cap(1);
+
         QRegExp sizeRegexp(QLatin1String("^size=(\\d+)x(\\d+)$"));
         if (args.indexOf(sizeRegexp) != -1) {
             dw = w = sizeRegexp.cap(1).toInt();
@@ -2264,6 +2364,7 @@ bool QVNCScreen::initDevice()
     }
     d_ptr->vncServer = new QVNCServer(this, displayId);
     d_ptr->vncServer->setRefreshRate(d_ptr->refreshRate);
+    d_ptr->vncServer->setPasswordFile(d_ptr->passwordFile);
 
     switch (depth()) {
 #ifdef QT_QWS_DEPTH_32

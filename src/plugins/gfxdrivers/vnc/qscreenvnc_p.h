@@ -62,6 +62,11 @@
 #include <QtNetwork/qtcpsocket.h>
 #include <QtNetwork/qtcpserver.h>
 
+extern "C" {
+#include "d3des.h"
+#define CHALLENGESIZE 16
+}
+
 QT_BEGIN_NAMESPACE
 
 class QVNCServer;
@@ -252,6 +257,7 @@ public:
     bool doOnScreenSurface;
     QVNCDirtyMap *dirty;
     int refreshRate;
+    QString passwordFile;
     QVNCServer *vncServer;
 
 #if !defined(QT_NO_QWS_MULTIPROCESS) && !defined(QT_NO_SHAREDMEMORY)
@@ -440,7 +446,7 @@ public:
     void setDirtyCursor() { dirtyCursor = true; setDirty(); }
     inline bool isConnected() const { return state == Connected; }
     inline void setRefreshRate(int rate) { refreshRate = rate; }
-
+    inline void setPasswordFile(const QString &pwdFile) { passwordFile = pwdFile; }
     enum ClientMsg { SetPixelFormat = 0,
                      FixColourMapEntries = 1,
                      SetEncodings = 2,
@@ -475,6 +481,12 @@ private:
     void keyEvent();
     void clientCutText();
     bool pixelConversionNeeded() const;
+    bool readPasswordFile(QString &password);
+    inline void disconnectClient() {
+        client->close();  // automaticaly calls discardClient()
+        delete client;
+        client = 0;
+    }
 
 private slots:
     void newConnection();
@@ -484,11 +496,13 @@ private slots:
 
 private:
     void init(uint port);
-    enum ClientState { Unconnected, Protocol, Init, Connected };
+    enum ClientState { Unconnected, Protocol, SecurityResult, Init, Connected };
     QTimer *timer;
     QTcpServer *serverSocket;
     QTcpSocket *client;
     ClientState state;
+    unsigned char challenge[CHALLENGESIZE];
+    QString passwordFile;
     quint8 msgType;
     bool handleMsg;
     QRfbPixelFormat pixelFormat;
