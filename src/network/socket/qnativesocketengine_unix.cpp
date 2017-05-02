@@ -307,7 +307,7 @@ bool QNativeSocketEnginePrivate::setOption(QNativeSocketEngine::SocketOption opt
         return true;
     }
     case QNativeSocketEngine::AddressReusable:
-#if defined(SO_REUSEPORT)
+#if defined(SO_REUSEPORT) && !defined(Q_OS_LINUX)
         // on OS X, SO_REUSEADDR isn't sufficient to allow multiple binds to the
         // same port (which is useful for multicast UDP). SO_REUSEPORT is, but
         // we most definitely do not want to use this for TCP. See QTBUG-6305.
