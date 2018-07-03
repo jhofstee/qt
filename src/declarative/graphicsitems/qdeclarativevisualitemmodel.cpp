@@ -104,7 +104,7 @@ public:
     void updateIndices()
     {
         QList<Item>::iterator i;
-        int n;
+        int n = 0;
 
         for (i = children.begin(); i != children.end(); ++i) {
             QDeclarativeVisualItemModelAttached *attached = QDeclarativeVisualItemModelAttached::properties((*i).item);
