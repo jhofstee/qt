@@ -156,12 +156,14 @@ void QLinuxFbScreenPrivate::closeTty()
     if (ttyfd == -1)
         return;
 
+#if 0
     if (doGraphicsMode)
         ioctl(ttyfd, KDSETMODE, oldKdMode);
 
     // Blankin' screen, blinkin' cursor!
     const char termctl[] = "\033[9;15]\033[?33h\033[?25h\033[?0c";
     QT_WRITE(ttyfd, termctl, sizeof(termctl));
+#endif
 
     QT_CLOSE(ttyfd);
     ttyfd = -1;
