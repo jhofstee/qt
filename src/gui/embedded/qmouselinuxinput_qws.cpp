@@ -170,6 +170,9 @@ void QWSLinuxInputMousePrivate::readMouseData()
                 m_x = data->value;
             } else if (data->code == ABS_Y) {
                 m_y = data->value;
+            } else if (data->code == ABS_MT_POSITION_X || data->code == ABS_MT_POSITION_Y ||
+                       data->code == ABS_MT_TRACKING_ID || data->code == ABS_MT_SLOT) {
+                // ignore multitouch
             } else {
                 unknown = true;
             }
