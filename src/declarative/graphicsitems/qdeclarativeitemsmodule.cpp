@@ -151,6 +151,7 @@ void QDeclarativeItemModule::defineModule()
     qmlRegisterType<QDeclarativeViewSection>("QtQuick",1,0,"ViewSection");
     qmlRegisterType<QDeclarativeVisualDataModel>("QtQuick",1,0,"VisualDataModel");
     qmlRegisterType<QDeclarativeVisualItemModel>("QtQuick",1,0,"VisualItemModel");
+    qmlRegisterType<QDeclarativeVisualModels>("QtQuick",1,0,"VisualModels");
 
     qmlRegisterType<QDeclarativeAnchors>();
     qmlRegisterType<QDeclarativeKeyEvent>();
@@ -259,6 +260,7 @@ void QDeclarativeItemModule::defineModuleCompat()
     qmlRegisterType<QDeclarativeViewSection>("Qt",4,7,"ViewSection");
     qmlRegisterType<QDeclarativeVisualDataModel>("Qt",4,7,"VisualDataModel");
     qmlRegisterType<QDeclarativeVisualItemModel>("Qt",4,7,"VisualItemModel");
+    qmlRegisterType<QDeclarativeVisualModels>("Qt",4,7,"VisualModels");
 
     qmlRegisterType<QGraphicsWidget>("Qt",4,7,"QGraphicsWidget");
     qmlRegisterExtendedType<QGraphicsWidget,QDeclarativeGraphicsWidget>("Qt",4,7,"QGraphicsWidget");

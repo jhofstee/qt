@@ -1491,6 +1491,188 @@ void QDeclarativeVisualDataModel::_q_destroyingPackage(QDeclarativePackage *pack
     emit destroyingItem(qobject_cast<QDeclarativeItem*>(package->part(d->m_part)));
 }
 
+class QDeclarativeVisualModelsPrivate : public QObjectPrivate
+{
+public:
+    QDeclarativeVisualModelsPrivate() : QObjectPrivate() {}
+};
+
+/**
+ * QDeclarativeVisualModels Concat mutiple visual models, for example:
+ *
+ *  model: VisualModels {
+ *    VisualItemModel {
+ *    }
+ *
+ *    VisualDataModel {
+ *    }
+ *
+ *    VisualModels {
+ *    }
+ *  }
+ */
+QDeclarativeVisualModels::QDeclarativeVisualModels(QObject *parent) :
+  QDeclarativeVisualModel(*(new QDeclarativeVisualModelsPrivate), parent)
+{
+}
+
+QDeclarativeListProperty<QDeclarativeVisualModel> QDeclarativeVisualModels::models()
+{
+    return QDeclarativeListProperty<QDeclarativeVisualModel>(this, this, QDeclarativeVisualModels::model_append,
+                                                      QDeclarativeVisualModels::model_count, QDeclarativeVisualModels::model_at);
+}
+
+int QDeclarativeVisualModels::count() const
+{
+    int count = 0;
+    Q_FOREACH(QDeclarativeVisualModel *model, mModels)
+        count += model->count();
+    return count;
+}
+
+bool QDeclarativeVisualModels::isValid() const
+{
+    // note: the data model will have a count of zero when it has no delegate.
+    // so that one is implicitly skipped well the other remain visible in that case.
+    return true;
+}
+
+QDeclarativeItem *QDeclarativeVisualModels::item(int index, bool complete)
+{
+    QDeclarativeVisualModel *model = findModelChangeIndex(index);
+    if (model)
+        return model->item(index, complete);
+    return 0;
+}
+
+QDeclarativeVisualDataModel::ReleaseFlags QDeclarativeVisualModels::release(QDeclarativeItem *item)
+{
+    ReleaseFlags flags = 0;
+    Q_FOREACH(QDeclarativeVisualModel *model, mModels)
+        flags |= model->release(item);
+    return flags;
+}
+
+bool QDeclarativeVisualModels::completePending() const
+{
+    Q_FOREACH(QDeclarativeVisualModel *model, mModels) {
+        if (model->completePending())
+            return true;
+    }
+    return false;
+}
+
+void QDeclarativeVisualModels::completeItem()
+{
+     Q_FOREACH(QDeclarativeVisualModel *model, mModels)
+         model->completeItem();
+}
+
+QString QDeclarativeVisualModels::stringValue(int index, const QString &role)
+{
+    QDeclarativeVisualModel *model = findModelChangeIndex(index);
+    if (model)
+        return model->stringValue(index, role);
+    return QString();
+}
+
+int QDeclarativeVisualModels::indexOf(QDeclarativeItem *item, QObject *objectContext) const
+{
+    int index = 0;
+    Q_FOREACH(QDeclarativeVisualModel *model, mModels) {
+        int indexInModel = model->indexOf(item, objectContext);
+        if (indexInModel != -1)
+            return index + indexInModel;
+        index += model->count();
+    }
+
+    return -1;
+}
+
+void QDeclarativeVisualModels::onCreatedItem(int index, QDeclarativeItem *item)
+{
+    QDeclarativeVisualModel *model = static_cast<QDeclarativeVisualModel *>(sender());
+    index = absoluteIndex(model, index);
+    emit createdItem(index, item);
+}
+
+void QDeclarativeVisualModels::onItemsInserted(int index, int count)
+{
+    QDeclarativeVisualModel *model = static_cast<QDeclarativeVisualModel *>(sender());
+    index = absoluteIndex(model, index);
+    emit itemsInserted(index, count);
+}
+
+void QDeclarativeVisualModels::onItemsRemoved(int index, int count)
+{
+    QDeclarativeVisualModel *model = static_cast<QDeclarativeVisualModel *>(sender());
+    index = absoluteIndex(model, index);
+    emit itemsRemoved(index, count);
+}
+
+void QDeclarativeVisualModels::onItemsMoved(int from, int to, int count)
+{
+    QDeclarativeVisualModel *model = static_cast<QDeclarativeVisualModel *>(sender());
+    from = absoluteIndex(model, from);
+    to = absoluteIndex(model, to);
+    emit itemsMoved(from, to, count);
+}
+
+QDeclarativeVisualModel *QDeclarativeVisualModels::findModelChangeIndex(int &index)
+{
+    Q_FOREACH(QDeclarativeVisualModel *model, mModels) {
+        int count = model->count();
+        if (index < count)
+            return model;
+        index -= count;
+    }
+    return 0;
+}
+
+int QDeclarativeVisualModels::absoluteIndex(QDeclarativeVisualModel *model, int index)
+{
+    Q_FOREACH(QDeclarativeVisualModel *itt, mModels) {
+        if (itt == model)
+            return index;
+        index += itt->count();
+    }
+    return -1;
+}
+
+void QDeclarativeVisualModels::model_append(QDeclarativeListProperty<QDeclarativeVisualModel> *prop, QDeclarativeVisualModel *item)
+{
+    QDeclarative_setParent_noEvent(item, prop->object);
+
+    QDeclarativeVisualModels *visualModules = static_cast<QDeclarativeVisualModels *>(prop->data);
+    int oldCount = visualModules->count();
+
+    visualModules->mModels.append(item);
+
+    connect(item, SIGNAL(countChanged()), visualModules, SIGNAL(countChanged()));
+    connect(item, SIGNAL(destroyingItem(QDeclarativeItem*)), visualModules, SIGNAL(destroyingItem(QDeclarativeItem*)));
+    connect(item, SIGNAL(modelReset()), visualModules, SIGNAL(modelReset()));
+
+    connect(item, SIGNAL(itemsInserted(int,int)), visualModules, SLOT(onItemsInserted(int,int)));
+    connect(item, SIGNAL(itemsRemoved(int,int)), visualModules, SLOT(onItemsRemoved(int,int)));
+    connect(item, SIGNAL(itemsMoved(int,int,int)), visualModules, SLOT(onItemsMoved(int,int,int)));
+    connect(item, SIGNAL(createdItem(int,QDeclarativeItem*)), visualModules, SLOT(onCreatedItem(int,QDeclarativeItem*)));
+
+    emit visualModules->itemsInserted(oldCount - 1, item->count());
+    emit visualModules->modelsChanged();
+}
+
+int QDeclarativeVisualModels::model_count(QDeclarativeListProperty<QDeclarativeVisualModel> *prop)
+{
+    QDeclarativeVisualModels *visualModules = static_cast<QDeclarativeVisualModels *>(prop->data);
+    return visualModules->mModels.count();
+}
+
+QDeclarativeVisualModel *QDeclarativeVisualModels::model_at(QDeclarativeListProperty<QDeclarativeVisualModel> *prop, int index)
+{
+    QDeclarativeVisualModels *visualModules = static_cast<QDeclarativeVisualModels *>(prop->data);
+    return visualModules->mModels.at(index);
+}
+
 QT_END_NAMESPACE
 
 QML_DECLARE_TYPE(QListModelInterface)

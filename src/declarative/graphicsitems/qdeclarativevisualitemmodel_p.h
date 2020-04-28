@@ -249,11 +249,56 @@ public:
     static QHash<QObject*, QDeclarativeVisualItemModelAttached*> attachedProperties;
 };
 
+class Q_AUTOTEST_EXPORT QDeclarativeVisualModels : public QDeclarativeVisualModel
+{
+    Q_OBJECT
+    Q_PROPERTY(QDeclarativeListProperty<QDeclarativeVisualModel> models READ models NOTIFY modelsChanged)
+    Q_CLASSINFO("DefaultProperty", "models")
+
+public:
+    QDeclarativeVisualModels(QObject *parent=0);
+    virtual ~QDeclarativeVisualModels() {}
+
+    QDeclarativeListProperty<QDeclarativeVisualModel> models();
+
+    virtual int count() const;
+    virtual bool isValid() const;
+    virtual QDeclarativeItem *item(int index, bool complete=true);
+    virtual ReleaseFlags release(QDeclarativeItem *item);
+    virtual bool completePending() const;
+    virtual void completeItem();
+    virtual QString stringValue(int index, const QString &role);
+    virtual void setWatchedRoles(QList<QByteArray>) {}
+
+    virtual int indexOf(QDeclarativeItem *item, QObject *objectContext) const;
+
+signals:
+    void modelsChanged();
+
+private slots:
+    void onItemsInserted(int index, int count);
+    void onCreatedItem(int index, QDeclarativeItem *item);
+    void onItemsRemoved(int index, int count);
+    void onItemsMoved(int from, int to, int count);
+
+private:
+    QDeclarativeVisualModel *findModelChangeIndex(int &index);
+    int absoluteIndex(QDeclarativeVisualModel *model, int index);
+
+    QList<QDeclarativeVisualModel *> mModels;
+
+    static void model_append(QDeclarativeListProperty<QDeclarativeVisualModel> *prop, QDeclarativeVisualModel *item);
+    static int model_count(QDeclarativeListProperty<QDeclarativeVisualModel> *prop);
+    static QDeclarativeVisualModel *model_at(QDeclarativeListProperty<QDeclarativeVisualModel> *prop, int index);
+
+    Q_DISABLE_COPY(QDeclarativeVisualModels)
+};
 
 QT_END_NAMESPACE
 
 QML_DECLARE_TYPE(QDeclarativeVisualModel)
 QML_DECLARE_TYPE(QDeclarativeVisualItemModel)
+QML_DECLARE_TYPE(QDeclarativeVisualModels)
 QML_DECLARE_TYPEINFO(QDeclarativeVisualItemModel, QML_HAS_ATTACHED_PROPERTIES)
 QML_DECLARE_TYPE(QDeclarativeVisualDataModel)
 
