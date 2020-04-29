@@ -3452,6 +3452,11 @@ export SYSROOT_FLAG    # used by config.tests/unix/compile.test
 # Since qt4 is no longer officialy maintained, silence the harmless warnings
 # since nobody is going to fix them anyway...
 
+if compilerSupportsFlag $TEST_COMPILER -Wexpansion-to-defined -Werror; then
+	QMakeVar add QMAKE_CFLAGS -Wno-expansion-to-defined
+	QMakeVar add QMAKE_CXXFLAGS -Wno-expansion-to-defined
+fi
+
 if compilerSupportsFlag $TEST_COMPILER -Wunused-but-set-variable -Werror; then
 	QMakeVar add QMAKE_CFLAGS -Wno-unused-but-set-variable
 	QMakeVar add QMAKE_CXXFLAGS -Wno-unused-but-set-variable
@@ -3491,6 +3496,10 @@ fi
 if compilerSupportsFlag $TEST_COMPILER -Wswitch -Werror; then
 	QMakeVar add QMAKE_CFLAGS -Wno-switch
 	QMakeVar add QMAKE_CXXFLAGS -Wno-switch
+fi
+
+if compilerSupportsFlag $TEST_COMPILER -Wc++11-compat -Werror; then
+	QMakeVar add QMAKE_CXXFLAGS -Wno-c++11-compat
 fi
 
 if compilerSupportsFlag $TEST_COMPILER -Wdeprecated-copy -Werror; then
