@@ -622,6 +622,8 @@ void QDeclarativeListViewPrivate::clear()
     }
     visiblePos = header ? header->size() : 0;
     visibleIndex = 0;
+    if (currentItem)
+        currentItem->attached->setIsCurrentItem(false);
     releaseItem(currentItem);
     currentItem = 0;
     createHighlight();
