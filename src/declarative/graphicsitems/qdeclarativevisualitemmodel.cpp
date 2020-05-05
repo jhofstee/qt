@@ -359,8 +359,9 @@ public:
                 for (int ii = 0; ii < m_roles.count(); ++ii)
                     m_roleNames.insert(m_listModelInterface->toString(m_roles.at(ii)).toUtf8(), m_roles.at(ii));
             } else if (m_abstractItemModel) {
-                for (QHash<int,QByteArray>::const_iterator it = m_abstractItemModel->roleNames().begin();
-                        it != m_abstractItemModel->roleNames().end(); ++it) {
+                QHash<int,QByteArray> roleNames = m_abstractItemModel->roleNames();
+                for (QHash<int,QByteArray>::const_iterator it = roleNames.begin();
+                        it != roleNames.end(); ++it) {
                     m_roles.append(it.key());
                     m_roleNames.insert(*it, it.key());
                 }
