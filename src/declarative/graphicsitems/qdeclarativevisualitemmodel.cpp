@@ -500,6 +500,8 @@ public:
     ~QDeclarativeVisualDataModelData();
 
     Q_PROPERTY(int index READ index NOTIFY indexChanged)
+    Q_PROPERTY(QDeclarativeVisualDataModel * model READ model CONSTANT)
+
     int index() const;
     void setIndex(int index);
 
@@ -515,6 +517,8 @@ public:
     }
 
     void ensureProperties();
+
+    Q_INVOKABLE QDeclarativeVisualDataModel *model() { return m_model; }
 
 Q_SIGNALS:
     void indexChanged();
