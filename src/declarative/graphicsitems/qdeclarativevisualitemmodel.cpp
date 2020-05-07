@@ -776,6 +776,11 @@ QVariant QDeclarativeVisualDataModel::model() const
 void QDeclarativeVisualDataModel::setModel(const QVariant &model)
 {
     Q_D(QDeclarativeVisualDataModel);
+
+    int n = count();
+    if (n)
+        emit itemsRemoved(0, n);
+
     delete d->m_listAccessor;
     d->m_listAccessor = 0;
     d->m_modelVariant = model;
