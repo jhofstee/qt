@@ -205,6 +205,8 @@ void QWSLinuxInputMousePrivate::readMouseData()
         } else if (data->type == EV_MSC && data->code == MSC_SCAN) {
             // kernel encountered an unmapped key - just ignore it
             continue;
+        } else if (data->type == EV_SND) {
+            continue;
         } else {
             unknown = true;
         }
