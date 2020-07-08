@@ -64,6 +64,7 @@ class QDeclarativeTransition;
 class QDeclarativeKeyEvent;
 class QDeclarativeAnchors;
 class QDeclarativeItemPrivate;
+class QDeclarativeListView;
 class Q_DECLARATIVE_EXPORT QDeclarativeItem : public QGraphicsObject, public QDeclarativeParserStatus
 {
     Q_OBJECT
@@ -204,6 +205,7 @@ protected:
 private:
     Q_DISABLE_COPY(QDeclarativeItem)
     Q_DECLARE_PRIVATE_D(QGraphicsItem::d_ptr.data(), QDeclarativeItem)
+    friend class QDeclarativeListView;
 };
 
 template<typename T>

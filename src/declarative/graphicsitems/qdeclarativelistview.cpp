@@ -3191,8 +3191,9 @@ void QDeclarativeListView::updateSections()
 void QDeclarativeListView::showChanged()
 {
     Q_D(QDeclarativeListView);
+    QDeclarativeItem *item = dynamic_cast<QDeclarativeItem *>(sender());
 
-    if (!d->isValid() || !isComponentComplete())
+    if (!item->isComponentComplete() || !d->isValid() || !isComponentComplete())
         return;
 
     if (d->currentItem != 0) {
