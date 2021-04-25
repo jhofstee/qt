@@ -1216,6 +1216,8 @@ void QSortFilterProxyModelPrivate::_q_sourceDataChanged(const QModelIndex &sourc
         sort_source_rows(source_rows_insert, source_parent);
         insert_source_items(m->proxy_rows, m->source_rows,
                             source_rows_insert, source_parent, Qt::Vertical);
+        if (dynamic_sortfilter && source_sort_column < 0 && proxy_sort_column >= 0 && update_source_sort_column())
+            sort();
     }
 }
 
