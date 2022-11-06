@@ -46,6 +46,8 @@
 
 #include <QtCore/qobject.h>
 #include <QtCore/qabstractitemmodel.h>
+#include "qdeclarativeitem.h"
+#include <qdeclarativeproperty.h>
 
 QT_BEGIN_HEADER
 
@@ -294,8 +296,62 @@ private:
     Q_DISABLE_COPY(QDeclarativeVisualModels)
 };
 
+class QDeclarativeVisibleWatcher {
+public:
+    QDeclarativeVisibleWatcher(QDeclarativeItem *item) :
+        mItem(item),
+        mShow(item, "show")
+    {
+    }
+
+    QDeclarativeItem *mItem;
+    QDeclarativeProperty mShow;
+
+    bool show();
+};
+
+class Q_AUTOTEST_EXPORT QDeclarativeVisibleItemModel : public QDeclarativeVisualItemModel
+{
+    Q_OBJECT
+    Q_PROPERTY(QDeclarativeListProperty<QDeclarativeItem> allChildren READ getAllChildren NOTIFY allChildrenChanged)
+    Q_CLASSINFO("DefaultProperty", "allChildren")
+
+public:
+    QDeclarativeVisibleItemModel(QObject *parent = 0);
+    virtual ~QDeclarativeVisibleItemModel() {}
+
+    QDeclarativeListProperty<QDeclarativeItem> getAllChildren();
+
+    Q_INVOKABLE void append(QDeclarativeItem *item);
+    Q_INVOKABLE void clear(void);
+
+Q_SIGNALS:
+    void allChildrenChanged();
+
+private slots:
+    void onShowChanged();
+
+private:
+    static void all_children_append(QDeclarativeListProperty<QDeclarativeItem> *prop, QDeclarativeItem *item);
+    static int all_children_count(QDeclarativeListProperty<QDeclarativeItem> *prop);
+    static QDeclarativeItem *all_children_at(QDeclarativeListProperty<QDeclarativeItem> *prop, int index);
+    static void all_children_clear(QDeclarativeListProperty<QDeclarativeItem> *prop);
+
+    Q_INVOKABLE void insert(int, QDeclarativeItem *) {}
+    Q_INVOKABLE void remove(int) {}
+
+    int getAllIndex(QDeclarativeItem *item);
+    int getVisibleIndex(QDeclarativeItem *item);
+
+    QList<QDeclarativeVisibleWatcher> allChildren;
+
+    Q_DISABLE_COPY(QDeclarativeVisibleItemModel)
+};
+
 QT_END_NAMESPACE
 
+QML_DECLARE_TYPE(QDeclarativeVisibleItemModel)
+QML_DECLARE_TYPEINFO(QDeclarativeVisibleItemModel, QML_HAS_ATTACHED_PROPERTIES)
 QML_DECLARE_TYPE(QDeclarativeVisualModel)
 QML_DECLARE_TYPE(QDeclarativeVisualItemModel)
 QML_DECLARE_TYPE(QDeclarativeVisualModels)

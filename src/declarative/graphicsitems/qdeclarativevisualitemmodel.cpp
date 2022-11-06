@@ -136,6 +136,8 @@ public:
 
         Item item = children[i];
         children.removeAt(i);
+        QDeclarativeVisualItemModelAttached *attached = QDeclarativeVisualItemModelAttached::properties(item.item);
+        attached->setIndex(-1);
         updateIndices();
 
         emit q->countChanged();
@@ -1681,6 +1683,117 @@ QDeclarativeVisualModel *QDeclarativeVisualModels::model_at(QDeclarativeListProp
 {
     QDeclarativeVisualModels *visualModules = static_cast<QDeclarativeVisualModels *>(prop->data);
     return visualModules->mModels.at(index);
+}
+
+
+bool QDeclarativeVisibleWatcher::show()
+{
+    return !mShow.isProperty() || mShow.read().toBool() == true;
+}
+
+QDeclarativeVisibleItemModel::QDeclarativeVisibleItemModel(QObject *parent) :
+    QDeclarativeVisualItemModel(parent)
+{
+}
+
+QDeclarativeListProperty<QDeclarativeItem> QDeclarativeVisibleItemModel::getAllChildren()
+{
+    return QDeclarativeListProperty<QDeclarativeItem>(this, this,
+                                                      QDeclarativeVisibleItemModel::all_children_append,
+                                                      QDeclarativeVisibleItemModel::all_children_count,
+                                                      QDeclarativeVisibleItemModel::all_children_at,
+                                                      QDeclarativeVisibleItemModel::all_children_clear);
+}
+
+void QDeclarativeVisibleItemModel::append(QDeclarativeItem *item)
+{
+    QDeclarativeVisibleWatcher watch(item);
+    allChildren.append(watch);
+    watch.mShow.connectNotifySignal(this, SLOT(onShowChanged()));
+    if (watch.show())  {
+        QDeclarativeVisualItemModel::append(item);
+    } else {
+        item->setVisible(false);
+        QDeclarativeVisualItemModelAttached *attached = QDeclarativeVisualItemModel::qmlAttachedProperties(item);
+        attached->setIndex(-1);
+    }
+}
+
+void QDeclarativeVisibleItemModel::clear()
+{
+    while (allChildren.count()) {
+        QDeclarativeVisibleWatcher watch = allChildren.takeFirst();
+        watch.mItem->disconnect(this);
+        int n = getVisibleIndex(watch.mItem);
+        if (n >= 0)
+            QDeclarativeVisualItemModel::remove(n);
+    }
+}
+
+void QDeclarativeVisibleItemModel::onShowChanged()
+{
+    QDeclarativeItem *item = static_cast<QDeclarativeItem *>(sender());
+
+    if (item->property("show").toBool()) {
+        int n = getAllIndex(item);
+        if (n < 0)
+            return;
+
+        item->setVisible(true);
+
+        // Find the correct position  to insert the item.
+        int visibleIndex = -1;
+        n -= 1;
+        while (n >= 0) {
+            visibleIndex = getVisibleIndex(allChildren[n].mItem);
+            if (visibleIndex >= 0) {
+                visibleIndex++;
+                break;
+            }
+            n--;
+        }
+        if (visibleIndex < 0)
+            visibleIndex = 0;
+
+        QDeclarativeVisualItemModel::insert(visibleIndex, item);
+    } else {
+        int n = getVisibleIndex(item);
+        QDeclarativeVisualItemModel::remove(n);
+        item->setVisible(false);
+    }
+}
+
+void QDeclarativeVisibleItemModel::all_children_append(QDeclarativeListProperty<QDeclarativeItem> *prop, QDeclarativeItem *item)
+{
+    QDeclarative_setParent_noEvent(item, prop->object);
+    static_cast<QDeclarativeVisibleItemModel *>(prop->data)->append(item);
+}
+
+int QDeclarativeVisibleItemModel::all_children_count(QDeclarativeListProperty<QDeclarativeItem> *prop) {
+    return static_cast<QDeclarativeVisibleItemModel *>(prop->data)->allChildren.count();
+}
+
+QDeclarativeItem *QDeclarativeVisibleItemModel::all_children_at(QDeclarativeListProperty<QDeclarativeItem> *prop, int index) {
+    return static_cast<QDeclarativeVisibleItemModel *>(prop->data)->allChildren.at(index).mItem;
+}
+
+void QDeclarativeVisibleItemModel::all_children_clear(QDeclarativeListProperty<QDeclarativeItem> *prop)
+{
+    static_cast<QDeclarativeVisibleItemModel *>(prop->data)->clear();
+}
+
+int QDeclarativeVisibleItemModel::getAllIndex(QDeclarativeItem *item)
+{
+    for (int n=0; n < allChildren.count(); n++)
+        if (allChildren[n].mItem == item)
+            return n;
+    return -1;
+}
+
+int QDeclarativeVisibleItemModel::getVisibleIndex(QDeclarativeItem *item)
+{
+    QDeclarativeVisualItemModelAttached *attached = QDeclarativeVisualItemModel::qmlAttachedProperties(item);
+    return attached ? attached->index() : -1;
 }
 
 QT_END_NAMESPACE

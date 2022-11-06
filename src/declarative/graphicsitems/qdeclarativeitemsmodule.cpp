@@ -149,6 +149,7 @@ void QDeclarativeItemModule::defineModule()
     qmlRegisterType<QDeclarativeTextInput>("QtQuick",1,0,"TextInput");
 #endif
     qmlRegisterType<QDeclarativeViewSection>("QtQuick",1,0,"ViewSection");
+    qmlRegisterType<QDeclarativeVisibleItemModel>("QtQuick",1,0,"VisibleItemModel");
     qmlRegisterType<QDeclarativeVisualDataModel>("QtQuick",1,0,"VisualDataModel");
     qmlRegisterType<QDeclarativeVisualItemModel>("QtQuick",1,0,"VisualItemModel");
     qmlRegisterType<QDeclarativeVisualModels>("QtQuick",1,0,"VisualModels");
@@ -258,6 +259,7 @@ void QDeclarativeItemModule::defineModuleCompat()
     qmlRegisterType<QDeclarativeTextInput>("Qt",4,7,"TextInput");
 #endif
     qmlRegisterType<QDeclarativeViewSection>("Qt",4,7,"ViewSection");
+    qmlRegisterType<QDeclarativeVisibleItemModel>("Qt",4,7,"VisibleItemModel");
     qmlRegisterType<QDeclarativeVisualDataModel>("Qt",4,7,"VisualDataModel");
     qmlRegisterType<QDeclarativeVisualItemModel>("Qt",4,7,"VisualItemModel");
     qmlRegisterType<QDeclarativeVisualModels>("Qt",4,7,"VisualModels");
